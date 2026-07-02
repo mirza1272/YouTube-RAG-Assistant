@@ -1,0 +1,12 @@
+youtube-transcript-api
+langchain
+langchain-community
+langchain-google-genai
+faiss-cpu
+tiktoken
+python-dotenv
+langchain-groq
+langchain_core
+Flask
+sentence-transformers
+gunicorn
