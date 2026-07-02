@@ -2,8 +2,6 @@
 
 Welcome to the **YouTube Transcript RAG Chatbot**! This is a modern, full-stack application that allows you to instantly chat with any YouTube video. Just paste a YouTube URL, and the app will download the transcript, build a local knowledge base, and let you ask questions about the video's content using the incredibly fast Llama 3 LLM (via Groq) and HuggingFace Embeddings.
 
-![UI Preview](https://via.placeholder.com/800x400.png?text=YouTube+Transcript+RAG+Chatbot)
-
 ## ✨ Features
 - **Instant Video Processing:** Paste a URL and chat with the video in seconds.
 - **Local Embeddings:** Uses HuggingFace `all-MiniLM-L6-v2` locally to completely bypass API rate limits for embeddings.
@@ -26,7 +24,7 @@ Make sure you have Python 3.8+ installed on your machine.
 
 1. **Clone the repository** (or download the source code):
    ```bash
-   git clone https://github.com/yourusername/youtube-rag-chatbot.git
+   git clone https://github.com/mirza1272/YouTube-RAG-Assistant.git
    cd youtube-rag-chatbot
    ```
 
