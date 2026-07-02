@@ -11,6 +11,7 @@ from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, No
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_groq import ChatGroq
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import FAISS
 
 from langchain_core.prompts import PromptTemplate
@@ -91,9 +92,9 @@ def create_chunks(transcript):
 
 # Create FAISS vector store
 def create_vector_store(chunks):
-    from langchain_community.embeddings import HuggingFaceEmbeddings
-    embeddings = HuggingFaceEmbeddings(
-        model_name="all-MiniLM-L6-v2"
+    embeddings = GoogleGenerativeAIEmbeddings(
+        model="models/gemini-embedding-2",
+        google_api_key=os.environ["GEMINI_API_KEY"]
     )
 
     vector_store = FAISS.from_documents(chunks, embeddings)
@@ -211,7 +212,7 @@ def load_video():
             "status": "Ready",
             "session_id": session_id,
             "chunks_created": chunks_count,
-            "embedding_model": "all-MiniLM-L6-v2 (Local)",
+            "embedding_model": "Gemini Embedding 2 (API)",
             "llm": "Grok",
             "search_type": "MMR"
         })

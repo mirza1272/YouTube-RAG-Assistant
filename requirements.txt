@@ -7,5 +7,5 @@ python-dotenv
 langchain-groq
 langchain_core
 Flask
-sentence-transformers
+langchain-google-genai
 gunicorn

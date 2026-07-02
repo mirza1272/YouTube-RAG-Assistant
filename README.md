@@ -35,7 +35,9 @@ Make sure you have Python 3.8+ installed on your machine.
 
 3. **Set up Environment Variables:**
    Create a `.env` file in the root directory and add your API keys:
+   ```env
    GROK_API_KEY=your_groq_api_key_here
+   GEMINI_API_KEY=your_gemini_api_key_here
    ```
 
 4. **Run the Application:**
