@@ -57,6 +57,16 @@ We heartily welcome contributors of all skill levels! Whether you're a frontend 
 
 We are actively looking for help to scale this project. If you're interested, please feel free to fork the repository and submit a Pull Request.
 
+### 🛑 Known Issues & Workarounds
+
+1. **YouTube IP Ban on Cloud Providers (Render, AWS, GCP)**
+   - *Issue:* When deploying this app to cloud providers like Render, YouTube often blocks the server's IP address, resulting in a `YouTube is blocking requests from your IP` error when trying to fetch transcripts.
+   - *Solution:* The code is already set up to bypass this if you provide a `cookies.txt` file. 
+     1. Install a browser extension like "Get cookies.txt LOCALLY".
+     2. Export your cookies from YouTube.
+     3. Place the `cookies.txt` file in the root directory of this project (or upload it as a Secret File on your hosting provider). 
+     4. *Note: Never commit `cookies.txt` to GitHub! It is already added to `.gitignore`.*
+
 ### 🎯 Open Issues / Upcoming Features
 
 We are currently prioritizing the following features. If you want to contribute, these are perfect places to start:
