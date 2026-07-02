@@ -51,20 +51,33 @@ def get_transcript(youtube_url, language="en"):
     # Check if cookies file exists to bypass YouTube Cloud IP block
     cookies_file = "cookies.txt"
     use_cookies = os.path.exists(cookies_file)
-    cookies_kwarg = {"cookies": cookies_file} if use_cookies else {}
+    
+    http_client = None
+    if use_cookies:
+        import requests
+        from http.cookiejar import MozillaCookieJar
+        
+        cookie_jar = MozillaCookieJar(cookies_file)
+        # Only try to load if the file exists and is not empty
+        try:
+            cookie_jar.load(ignore_discard=True, ignore_expires=True)
+            http_client = requests.Session()
+            http_client.cookies = cookie_jar
+        except Exception:
+            pass
+
+    ytt_api = YouTubeTranscriptApi(http_client=http_client) if http_client else YouTubeTranscriptApi()
 
     try:
-        transcript_data = YouTubeTranscriptApi.get_transcript(
-            video_id, languages=[language], **cookies_kwarg
-        )
-        transcript = " ".join(snippet['text'] for snippet in transcript_data)
+        transcript_list = ytt_api.fetch(video_id, languages=[language])
+        transcript = " ".join(snippet.text for snippet in transcript_list)
         return transcript
 
     except NoTranscriptFound:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id, **cookies_kwarg)
+        available_transcripts = ytt_api.list(video_id)
         available_languages = []
 
-        for transcript_item in transcript_list:
+        for transcript_item in available_transcripts:
             available_languages.append({
                 "language": transcript_item.language,
                 "language_code": transcript_item.language_code,
