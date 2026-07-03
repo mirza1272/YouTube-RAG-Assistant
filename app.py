@@ -59,6 +59,13 @@ def get_transcript(youtube_url, language="en"):
         'quiet': True
     }
     
+    env_cookies = os.environ.get("YOUTUBE_COOKIES")
+    if env_cookies:
+        cookies_file = "env_cookies.txt"
+        with open(cookies_file, "w", encoding="utf-8") as f:
+            f.write(env_cookies)
+        ydl_opts['cookiefile'] = cookies_file
+    
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
