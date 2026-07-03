@@ -49,12 +49,21 @@ def get_transcript(youtube_url, language="en"):
         raise ValueError("Invalid YouTube URL")
 
     # Check if cookies file exists to bypass YouTube Cloud IP block
-    possible_cookie_paths = ["cookies.txt", "/etc/secrets/cookies.txt"]
     cookies_file = None
-    for path in possible_cookie_paths:
-        if os.path.exists(path):
-            cookies_file = path
-            break
+    
+    # 1. Try Environment Variable first (foolproof for Render)
+    env_cookies = os.environ.get("YOUTUBE_COOKIES")
+    if env_cookies:
+        cookies_file = "env_cookies.txt"
+        with open(cookies_file, "w", encoding="utf-8") as f:
+            f.write(env_cookies)
+    else:
+        # 2. Try file paths
+        possible_cookie_paths = ["cookies.txt", "/etc/secrets/cookies.txt"]
+        for path in possible_cookie_paths:
+            if os.path.exists(path):
+                cookies_file = path
+                break
             
     use_cookies = cookies_file is not None
     
