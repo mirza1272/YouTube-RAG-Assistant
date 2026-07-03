@@ -64,13 +64,15 @@ def get_transcript(youtube_url, language="en"):
         from http.cookiejar import MozillaCookieJar
         
         cookie_jar = MozillaCookieJar(cookies_file)
-        # Only try to load if the file exists and is not empty
+        # Remove the silent exception so we can see the exact error if the format is wrong
         try:
             cookie_jar.load(ignore_discard=True, ignore_expires=True)
             http_client = requests.Session()
             http_client.cookies = cookie_jar
-        except Exception:
-            pass
+        except Exception as e:
+            raise ValueError(f"Cookie file found at {cookies_file} but failed to load. The format might be wrong. Error: {str(e)}")
+    else:
+        print("WARNING: No cookies.txt found in any expected path. Proceeding without cookies.")
 
     ytt_api = YouTubeTranscriptApi(http_client=http_client) if http_client else YouTubeTranscriptApi()
 
