@@ -64,8 +64,11 @@ def get_transcript(youtube_url, language="en"):
             if os.path.exists(path):
                 cookies_file = path
                 break
+                
+    if cookies_file is None:
+        raise ValueError("CRITICAL: No cookies found! You must add the YOUTUBE_COOKIES environment variable in Render, otherwise YouTube will block the request.")
             
-    use_cookies = cookies_file is not None
+    use_cookies = True
     
     http_client = None
     if use_cookies:
