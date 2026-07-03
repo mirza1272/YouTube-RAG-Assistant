@@ -18,8 +18,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
 
-import yt_dlp
-import requests
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 
 
 # Load environment variables from .env file
@@ -44,72 +43,35 @@ def extract_video_id(youtube_url):
     return None
 
 
-# Get transcript from YouTube using yt-dlp
+# Get transcript from YouTube
 def get_transcript(youtube_url, language="en"):
     video_id = extract_video_id(youtube_url)
 
     if not video_id:
         raise ValueError("Invalid YouTube URL")
 
-    ydl_opts = {
-        'skip_download': True,
-        'writesubtitles': True,
-        'writeautomaticsub': True,
-        'subtitleslangs': [language],
-        'quiet': True
-    }
-    
-    env_cookies = os.environ.get("YOUTUBE_COOKIES")
-    if env_cookies:
-        cookies_file = "env_cookies.txt"
-        with open(cookies_file, "w", encoding="utf-8") as f:
-            f.write(env_cookies)
-        ydl_opts['cookiefile'] = cookies_file
-    
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
-            subs = info.get('subtitles') or info.get('automatic_captions')
-            
-            if not subs:
-                raise ValueError("No transcripts found for this video.")
-            
-            target_lang = None
-            for key in subs.keys():
-                if key.startswith(language):
-                    target_lang = key
-                    break
-                    
-            if not target_lang:
-                raise ValueError(f"Language '{language}' not found in available transcripts.")
-                
-            json3_url = None
-            for fmt in subs[target_lang]:
-                if fmt['ext'] == 'json3':
-                    json3_url = fmt['url']
-                    break
-                    
-            if not json3_url:
-                raise ValueError("Could not extract transcript data format.")
-                
-            resp = requests.get(json3_url)
-            data = resp.json()
-            
-            text_parts = []
-            for event in data.get('events', []):
-                if 'segs' in event:
-                    for seg in event['segs']:
-                        text_parts.append(seg.get('utf8', ''))
-                        
-            transcript = " ".join(text_parts).replace('\\n', ' ').strip()
-            
-            if not transcript:
-                raise ValueError("Transcript is empty.")
-                
-            return transcript
-            
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=[language])
+        transcript = " ".join(snippet['text'] for snippet in transcript_list)
+        return transcript
+
+    except NoTranscriptFound:
+        available_transcripts = YouTubeTranscriptApi.list_transcripts(video_id)
+        available_languages = []
+
+        for transcript_item in available_transcripts:
+            available_languages.append({
+                "language": transcript_item.language,
+                "language_code": transcript_item.language_code
+            })
+
+        lang_options = ", ".join([f"{t['language']} ({t['language_code']})" for t in available_languages])
+        raise ValueError(f"No transcript found in '{language}'. Available: {lang_options}")
+
+    except TranscriptsDisabled:
+        raise ValueError("Transcripts are disabled for this video.")
     except Exception as e:
-        raise ValueError(f"Failed to fetch transcript using yt-dlp: {str(e)}")
+        raise ValueError(f"Could not retrieve transcript: {str(e)}")
 
 
 # Create chunks from transcript

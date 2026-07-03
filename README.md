@@ -1,10 +1,10 @@
 # YouTube Transcript RAG Chatbot 🎥🤖
 
-Welcome to the **YouTube Transcript RAG Chatbot**! This is a modern, full-stack application that allows you to instantly chat with any YouTube video. Just paste a YouTube URL, and the app will download the transcript, build a local knowledge base, and let you ask questions about the video's content using the incredibly fast Llama 3 LLM (via Groq) and HuggingFace Embeddings.
+Welcome to the **YouTube Transcript RAG Chatbot**! This is a modern, full-stack application that allows you to instantly chat with any YouTube video. Just paste a YouTube URL, and the app will download the transcript, build a local knowledge base, and let you ask questions about the video's content using the incredibly fast Llama 3 LLM (via Groq) and Gemini Embeddings.
 
 ## ✨ Features
 - **Instant Video Processing:** Paste a URL and chat with the video in seconds.
-- **Local Embeddings:** Uses HuggingFace `all-MiniLM-L6-v2` locally to completely bypass API rate limits for embeddings.
+- **Gemini Embeddings:** Uses Gemini for embeddings.
 - **Fast Inference:** Powered by Groq's insanely fast inference engine running `Llama-3.3-70b-versatile`.
 - **Beautiful UI/UX:** A sleek, ChatGPT-like interface featuring Glassmorphism, a dark mode default, and fluid animations.
 - **Markdown Support:** Renders Markdown and code blocks with syntax highlighting directly in the chat.
@@ -13,7 +13,7 @@ Welcome to the **YouTube Transcript RAG Chatbot**! This is a modern, full-stack 
 ## 🛠️ Tech Stack
 - **Frontend:** Vanilla HTML5, CSS3 (Glassmorphism), Vanilla JavaScript (Fetch API)
 - **Backend:** Python, Flask
-- **AI/ML:** LangChain, FAISS (Vector Store), Groq (LLM), HuggingFace (Embeddings)
+- **AI/ML:** LangChain, FAISS (Vector Store), Groq (LLM), Gemini (Embeddings)
 
 ## 🚀 Getting Started
 
@@ -56,16 +56,6 @@ Make sure you have Python 3.8+ installed on your machine.
 We heartily welcome contributors of all skill levels! Whether you're a frontend wizard, a backend guru, or an AI enthusiast, there is a place for you here. 
 
 We are actively looking for help to scale this project. If you're interested, please feel free to fork the repository and submit a Pull Request.
-
-### 🛑 Known Issues & Workarounds
-
-1. **YouTube IP Ban on Cloud Providers (Render, AWS, GCP)**
-   - *Issue:* When deploying this app to cloud providers like Render, YouTube often blocks the server's IP address, resulting in a `YouTube is blocking requests from your IP` error when trying to fetch transcripts.
-   - *Solution:* The code is already set up to bypass this if you provide a `cookies.txt` file. 
-     1. Install a browser extension like "Get cookies.txt LOCALLY".
-     2. Export your cookies from YouTube.
-     3. Place the `cookies.txt` file in the root directory of this project (or upload it as a Secret File on your hosting provider). 
-     4. *Note: Never commit `cookies.txt` to GitHub! It is already added to `.gitignore`.*
 
 ### 🎯 Open Issues / Upcoming Features
 
