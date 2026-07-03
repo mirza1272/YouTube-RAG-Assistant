@@ -1,5 +1,5 @@
-youtube-transcript-api
-langchain
+yt-dlp
+requests
 langchain-community
 faiss-cpu
 tiktoken

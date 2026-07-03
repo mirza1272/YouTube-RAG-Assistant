@@ -2,12 +2,12 @@
 
 from urllib.parse import urlparse, parse_qs
 import os
+import re
+from urllib.parse import urlparse, parse_qs
 import uuid
 
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, render_template
-
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_groq import ChatGroq
@@ -17,6 +17,9 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
+
+import yt_dlp
+import requests
 
 
 # Load environment variables from .env file
@@ -41,79 +44,65 @@ def extract_video_id(youtube_url):
     return None
 
 
-# Get transcript from YouTube
+# Get transcript from YouTube using yt-dlp
 def get_transcript(youtube_url, language="en"):
     video_id = extract_video_id(youtube_url)
 
     if not video_id:
         raise ValueError("Invalid YouTube URL")
 
-    # Check if cookies file exists to bypass YouTube Cloud IP block
-    cookies_file = None
+    ydl_opts = {
+        'skip_download': True,
+        'writesubtitles': True,
+        'writeautomaticsub': True,
+        'subtitleslangs': [language],
+        'quiet': True
+    }
     
-    # 1. Try Environment Variable first (foolproof for Render)
-    env_cookies = os.environ.get("YOUTUBE_COOKIES")
-    if env_cookies:
-        cookies_file = "env_cookies.txt"
-        with open(cookies_file, "w", encoding="utf-8") as f:
-            f.write(env_cookies)
-    else:
-        # 2. Try file paths
-        possible_cookie_paths = ["cookies.txt", "/etc/secrets/cookies.txt"]
-        for path in possible_cookie_paths:
-            if os.path.exists(path):
-                cookies_file = path
-                break
-                
-    if cookies_file is None:
-        raise ValueError("CRITICAL: No cookies found! You must add the YOUTUBE_COOKIES environment variable in Render, otherwise YouTube will block the request.")
-            
-    use_cookies = True
-    
-    http_client = None
-    if use_cookies:
-        import requests
-        from http.cookiejar import MozillaCookieJar
-        
-        cookie_jar = MozillaCookieJar(cookies_file)
-        # Remove the silent exception so we can see the exact error if the format is wrong
-        try:
-            cookie_jar.load(ignore_discard=True, ignore_expires=True)
-            http_client = requests.Session()
-            http_client.cookies = cookie_jar
-        except Exception as e:
-            raise ValueError(f"Cookie file found at {cookies_file} but failed to load. The format might be wrong. Error: {str(e)}")
-    else:
-        print("WARNING: No cookies.txt found in any expected path. Proceeding without cookies.")
-
-    ytt_api = YouTubeTranscriptApi(http_client=http_client) if http_client else YouTubeTranscriptApi()
-
     try:
-        transcript_list = ytt_api.fetch(video_id, languages=[language])
-        transcript = " ".join(snippet.text for snippet in transcript_list)
-        return transcript
-
-    except NoTranscriptFound:
-        available_transcripts = ytt_api.list(video_id)
-        available_languages = []
-
-        for transcript_item in available_transcripts:
-            available_languages.append({
-                "language": transcript_item.language,
-                "language_code": transcript_item.language_code,
-                "is_generated": transcript_item.is_generated
-            })
-
-        return {
-            "error": "Transcript not found for selected language.",
-            "available_transcripts": available_languages
-        }
-
-    except TranscriptsDisabled:
-        return {
-            "error": "Transcripts are disabled for this video.",
-            "available_transcripts": []
-        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+            subs = info.get('subtitles') or info.get('automatic_captions')
+            
+            if not subs:
+                raise ValueError("No transcripts found for this video.")
+            
+            target_lang = None
+            for key in subs.keys():
+                if key.startswith(language):
+                    target_lang = key
+                    break
+                    
+            if not target_lang:
+                raise ValueError(f"Language '{language}' not found in available transcripts.")
+                
+            json3_url = None
+            for fmt in subs[target_lang]:
+                if fmt['ext'] == 'json3':
+                    json3_url = fmt['url']
+                    break
+                    
+            if not json3_url:
+                raise ValueError("Could not extract transcript data format.")
+                
+            resp = requests.get(json3_url)
+            data = resp.json()
+            
+            text_parts = []
+            for event in data.get('events', []):
+                if 'segs' in event:
+                    for seg in event['segs']:
+                        text_parts.append(seg.get('utf8', ''))
+                        
+            transcript = " ".join(text_parts).replace('\\n', ' ').strip()
+            
+            if not transcript:
+                raise ValueError("Transcript is empty.")
+                
+            return transcript
+            
+    except Exception as e:
+        raise ValueError(f"Failed to fetch transcript using yt-dlp: {str(e)}")
 
 
 # Create chunks from transcript
