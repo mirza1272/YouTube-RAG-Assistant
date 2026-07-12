@@ -1,10 +1,8 @@
 # YouTube Transcript RAG Chatbot Backend Code
 
-from urllib.parse import urlparse, parse_qs
 import os
-import re
-from urllib.parse import urlparse, parse_qs
 import uuid
+from urllib.parse import parse_qs, urlparse
 
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, render_template
@@ -28,6 +26,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
 
 ACTIVE_SESSIONS = {}
+TRANSCRIPT_API = YouTubeTranscriptApi()
 
 
 # Extract video ID from YouTube URL
@@ -44,34 +43,47 @@ def extract_video_id(youtube_url):
 
 
 # Get transcript from YouTube
+def get_available_transcripts(video_id):
+    available_transcripts = TRANSCRIPT_API.list(video_id)
+    transcript_options = []
+
+    for transcript_item in available_transcripts:
+        transcript_options.append({
+            "language": transcript_item.language,
+            "language_code": transcript_item.language_code,
+            "is_generated": getattr(transcript_item, "is_generated", False),
+            "is_translatable": getattr(transcript_item, "is_translatable", False)
+        })
+
+    return transcript_options
+
+
 def get_transcript(youtube_url, language="en"):
     video_id = extract_video_id(youtube_url)
 
     if not video_id:
-        raise ValueError("Invalid YouTube URL")
+        return {"error": "Invalid YouTube URL"}
 
     try:
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=[language])
-        transcript = " ".join(snippet['text'] for snippet in transcript_list)
+        transcript_list = TRANSCRIPT_API.fetch(video_id, languages=[language])
+        transcript = " ".join(snippet["text"] for snippet in transcript_list.to_raw_data())
         return transcript
 
     except NoTranscriptFound:
-        available_transcripts = YouTubeTranscriptApi.list_transcripts(video_id)
-        available_languages = []
+        available_languages = get_available_transcripts(video_id)
+        lang_options = ", ".join([
+            f"{t['language']} ({t['language_code']})" for t in available_languages
+        ]) or "No transcript languages available"
 
-        for transcript_item in available_transcripts:
-            available_languages.append({
-                "language": transcript_item.language,
-                "language_code": transcript_item.language_code
-            })
-
-        lang_options = ", ".join([f"{t['language']} ({t['language_code']})" for t in available_languages])
-        raise ValueError(f"No transcript found in '{language}'. Available: {lang_options}")
+        return {
+            "error": f"No transcript found in '{language}'. Available: {lang_options}",
+            "available_transcripts": available_languages
+        }
 
     except TranscriptsDisabled:
-        raise ValueError("Transcripts are disabled for this video.")
+        return {"error": "Transcripts are disabled for this video."}
     except Exception as e:
-        raise ValueError(f"Could not retrieve transcript: {str(e)}")
+        return {"error": f"Could not retrieve transcript: {str(e)}"}
 
 
 # Create chunks from transcript
