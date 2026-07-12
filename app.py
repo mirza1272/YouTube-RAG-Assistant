@@ -84,7 +84,7 @@ def get_transcript(youtube_url, language="en"):
         return {"error": f"Could not retrieve transcript: {str(e)}"}
 
 
-# Create chunks from transcript
+# This function will Create chunks from transcript
 def create_chunks(transcript):
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=3000,
