@@ -1,5 +1,3 @@
-# YouTube Transcript RAG Chatbot Backend Code
-
 import os
 import uuid
 from urllib.parse import parse_qs, urlparse
