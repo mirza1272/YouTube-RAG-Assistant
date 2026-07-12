@@ -7,7 +7,7 @@ Welcome to the **YouTube Transcript RAG Chatbot**! This is a modern, full-stack 
 - **Gemini Embeddings:** Uses Gemini for embeddings.
 - **Fast Inference:** Powered by Groq's insanely fast inference engine running `Llama-3.3-70b-versatile`.
 - **Beautiful UI/UX:** A sleek, ChatGPT-like interface featuring Glassmorphism, a dark mode default, and fluid animations.
-- **Markdown Support:** Renders Markdown and code blocks with syntax highlighting directly in the chat.
+- **Markdown Support:** Renders Markdown and code blocks with syntax highlighting directly in the chat. Automatically Support the LLM Markdown Styling into Attractive UI.
 - **Dynamic Fallbacks:** If English transcripts aren't available, the app intelligently prompts you to select from available languages.
 
 ## 🛠️ Tech Stack
