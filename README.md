@@ -30,7 +30,7 @@ Make sure you have Python 3.8+ installed on your machine.
 
 2. **Install the dependencies:**
    ```bash
-   pip install -r requirements.txt
+   pip install -r requirements.txt # install all required packages
    ```
 
 3. **Set up Environment Variables:**
