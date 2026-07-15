@@ -1,5 +1,7 @@
 import os
 import uuid
+import hashlib
+import math
 from urllib.parse import parse_qs, urlparse
 
 from dotenv import load_dotenv
@@ -9,6 +11,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_groq import ChatGroq
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import FAISS
+from langchain_core.embeddings import Embeddings
 
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableLambda
@@ -25,6 +28,54 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
 
 ACTIVE_SESSIONS = {}
 TRANSCRIPT_API = YouTubeTranscriptApi()
+
+
+class HashingEmbeddings(Embeddings):
+    def __init__(self, dimension=384):
+        self.dimension = dimension
+
+    def _embed_text(self, text):
+        vector = [0.0] * self.dimension
+
+        for token in text.lower().split():
+            digest = hashlib.sha256(token.encode("utf-8")).digest()
+            index = int.from_bytes(digest[:4], "big") % self.dimension
+            weight = (int.from_bytes(digest[4:8], "big") % 1000) / 1000.0 + 1.0
+            vector[index] += weight
+
+        norm = math.sqrt(sum(value * value for value in vector))
+        if norm:
+            vector = [value / norm for value in vector]
+
+        return vector
+
+    def embed_documents(self, texts):
+        return [self._embed_text(text) for text in texts]
+
+    def embed_query(self, text):
+        return self._embed_text(text)
+
+
+def is_quota_error(error):
+    error_message = str(error).lower()
+    quota_signals = [
+        "resource_exhausted",
+        "quota",
+        "rate limit",
+        "429",
+    ]
+    return any(signal in error_message for signal in quota_signals)
+
+
+def get_gemini_api_keys():
+    raw_keys = os.getenv("GEMINI_API_KEYS", "")
+    keys = [key.strip() for key in raw_keys.split(",") if key.strip()]
+
+    primary_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if primary_key and primary_key not in keys:
+        keys.insert(0, primary_key)
+
+    return keys
 
 
 # Extract video ID from YouTube URL
@@ -97,13 +148,28 @@ def create_chunks(transcript):
 
 # Create FAISS vector store
 def create_vector_store(chunks):
-    embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/gemini-embedding-2",
-        google_api_key=os.environ["GEMINI_API_KEY"]
-    )
+    last_error = None
 
+    for api_key in get_gemini_api_keys():
+        embeddings = GoogleGenerativeAIEmbeddings(
+            model="models/gemini-embedding-2",
+            google_api_key=api_key,
+        )
+
+        try:
+            vector_store = FAISS.from_documents(chunks, embeddings)
+            return vector_store, "Gemini Embedding 2 (API)"
+        except Exception as error:
+            last_error = error
+            if not is_quota_error(error):
+                raise
+
+    embeddings = HashingEmbeddings()
     vector_store = FAISS.from_documents(chunks, embeddings)
-    return vector_store
+    if last_error is not None:
+        return vector_store, "Local Hashing Embeddings (offline fallback)"
+
+    return vector_store, "Local Hashing Embeddings (offline fallback)"
 
 
 # Format retrieved documents into context
@@ -167,10 +233,10 @@ def build_youtube_rag(youtube_url, language="en"):
         return transcript_result
 
     chunks = create_chunks(transcript_result)
-    vector_store = create_vector_store(chunks)
+    vector_store, embedding_model = create_vector_store(chunks)
     rag_chain = create_rag_chain(vector_store)
 
-    return rag_chain
+    return rag_chain, embedding_model
 
 
 # Ask question from RAG chatbot
@@ -201,8 +267,9 @@ def load_video():
         if isinstance(rag_chain_or_error, dict) and "error" in rag_chain_or_error:
             return jsonify(rag_chain_or_error), 400
 
+        rag_chain, embedding_model = rag_chain_or_error
         session_id = str(uuid.uuid4())
-        ACTIVE_SESSIONS[session_id] = rag_chain_or_error
+        ACTIVE_SESSIONS[session_id] = rag_chain
 
         # Try to extract chunks count from FAISS vectorstore if possible
         chunks_count = "N/A"
@@ -217,7 +284,7 @@ def load_video():
             "status": "Ready",
             "session_id": session_id,
             "chunks_created": chunks_count,
-            "embedding_model": "Gemini Embedding 2 (API)",
+            "embedding_model": embedding_model,
             "llm": "Grok",
             "search_type": "MMR"
         })
