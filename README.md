@@ -1,10 +1,10 @@
 # YouTube Transcript RAG Chatbot 🎥🤖
 
-Welcome to the **YouTube Transcript RAG Chatbot**! This is a modern, full-stack application that allows you to instantly chat with any YouTube video. Just paste a YouTube URL, and the app will download the transcript, build a local knowledge base, and let you ask questions about the video's content using the incredibly fast Llama 3 LLM (via Groq) and Gemini Embeddings.
+Welcome to the **YouTube Transcript RAG Chatbot**! This is a modern, full-stack application that allows you to instantly chat with any YouTube video. Just paste a YouTube URL, and the app will download the transcript, build a local knowledge base, and let you ask questions about the video's content using the Llama 3 LLM (via Groq) and Gemini Embeddings with automatic fallback when the Gemini quota is exhausted.
 
 ## ✨ Features
 - **Instant Video Processing:** Paste a URL and chat with the video in seconds.
-- **Gemini Embeddings:** Uses Gemini for embeddings.
+- **Gemini Embeddings with Fallback:** Uses Gemini for embeddings first, then falls back to a local offline embedding strategy if the API quota is exhausted.
 - **Fast Inference:** Powered by Groq's insanely fast inference engine running `Llama-3.3-70b-versatile`.
 - **Beautiful UI/UX:** A sleek, ChatGPT-like interface featuring Glassmorphism, a dark mode default, and fluid animations.
 - **Markdown Support:** Renders Markdown and code blocks with syntax highlighting directly in the chat. Automatically Support the LLM Markdown Styling into Attractive UI.
@@ -13,7 +13,7 @@ Welcome to the **YouTube Transcript RAG Chatbot**! This is a modern, full-stack 
 ## 🛠️ Tech Stack
 - **Frontend:** Vanilla HTML5, CSS3 (Glassmorphism), Vanilla JavaScript (Fetch API)
 - **Backend:** Python, Flask
-- **AI/ML:** LangChain, FAISS (Vector Store), Groq (LLM), Gemini (Embeddings)
+- **AI/ML:** LangChain, FAISS (Vector Store), Groq (LLM), Gemini (Embeddings), local offline embedding fallback
 
 ## 🚀 Getting Started
 
@@ -38,13 +38,15 @@ Make sure you have Python 3.8+ installed on your machine.
    ```env
    GROK_API_KEY=your_groq_api_key_here
    GEMINI_API_KEY=your_gemini_api_key_here
+   # Optional: provide multiple Gemini keys separated by commas for rotation
+   GEMINI_API_KEYS=your_first_gemini_key,your_second_gemini_key
    ```
 
 4. **Run the Application:**
    ```bash
    python app.py
    ```
-   *(Note: The first time you run it, it may take a few moments to download the local HuggingFace embedding weights).*
+   *(Note: If Gemini hits a quota limit, the app automatically falls back to a deterministic local embedding mode, so no extra model download is required.)*
 
 5. **Open your browser:**
    Navigate to `http://127.0.0.1:5000` to start chatting!
